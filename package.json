@@ -1,0 +1,30 @@
+{
+  "name": "scrapely-website-finder",
+  "version": "0.1.0",
+  "description": "Twitter/X handle to B2B company website, using the Scrapely profile API and your own AI key",
+  "type": "module",
+  "main": "website-finder.js",
+  "bin": {
+    "scrapely-website-finder": "website-finder.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "tldts": "^6.1.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepblue6/scrapely-website-finder.git"
+  },
+  "keywords": [
+    "twitter",
+    "x",
+    "website",
+    "domain",
+    "enrichment",
+    "lead-generation",
+    "scrapely"
+  ]
+}
