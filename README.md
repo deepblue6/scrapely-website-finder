@@ -53,7 +53,15 @@ This is the same method Scrapely's email finder uses to pick a company domain:
 
 ## Speed and cost
 
-In our test on 200 real profiles: about 4 seconds per profile, 200 profiles in under 3 minutes running 5 at a time, and about $0.05 of AI per 1,000 profiles. The Scrapely profile API is free. If you go past its limit of 120 requests a minute, the finder waits and retries for you.
+In our tests: about 3 seconds per profile and about $0.05 of AI per 1,000 profiles. The Scrapely profile API is free.
+
+It looks up 5 handles at a time by default. Change that with `--concurrency`:
+
+```bash
+node website-finder.js --concurrency 10 $(cat handles.txt)
+```
+
+Results print as each one finishes, so they may come out in a different order than you gave them. Each line includes `handle`. Your Scrapely key allows 120 requests a minute (each profile uses 1 to 3), which works out to about 1,000 profiles in 20 minutes. If you go past the limit, the finder waits and retries for you. Need a higher limit? Email [support@scrapely.co](mailto:support@scrapely.co).
 
 ## Other AI models
 

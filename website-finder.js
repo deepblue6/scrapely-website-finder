@@ -303,16 +303,26 @@ export async function findWebsite(handle, options = {}) {
 // ─── CLI ───────────────────────────────────────────────────────────────────
 
 if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
-  const handles = process.argv.slice(2);
-  if (handles.length === 0) {
-    console.error("Usage: node website-finder.js <handle> [handle...]");
+  const args = process.argv.slice(2);
+  const flag = args.indexOf("--concurrency");
+  const concurrency = flag === -1 ? 5 : Number(args.splice(flag, 2)[1]);
+  const handles = args;
+  if (handles.length === 0 || !Number.isInteger(concurrency) || concurrency < 1) {
+    console.error("Usage: node website-finder.js [--concurrency 5] <handle> [handle...]");
     process.exit(1);
   }
-  for (const handle of handles) {
-    try {
-      console.log(JSON.stringify(await findWebsite(handle)));
-    } catch (e) {
-      console.log(JSON.stringify({ handle, domain: null, error: e.message }));
+
+  // Look up `concurrency` handles at a time; each result prints as soon as it's done
+  let next = 0;
+  const worker = async () => {
+    while (next < handles.length) {
+      const handle = handles[next++];
+      try {
+        console.log(JSON.stringify(await findWebsite(handle)));
+      } catch (e) {
+        console.log(JSON.stringify({ handle, domain: null, error: e.message }));
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, handles.length) }, worker));
 }

@@ -13,7 +13,7 @@ This repo turns Twitter/X handles into company websites. It is one file, `websit
 ## Run
 
 ```bash
-node website-finder.js <handle> [handle...]
+node website-finder.js [--concurrency 5] <handle> [handle...]
 ```
 
 Each handle prints one JSON line on stdout:
@@ -26,7 +26,7 @@ Each handle prints one JSON line on stdout:
 - `source` says which step found it: `ai_company_domain`, `bio_link` or `company_profile`.
 - `first_name` and `last_name` are ready for an email finder.
 
-For a list of handles, pass them all in one command or call `findWebsite(handle)` from code. Keep it to about 5 at a time: the Scrapely API allows 120 requests a minute per key, and the finder waits and retries when it hits that limit.
+For a list of handles, pass them all in one command: `node website-finder.js --concurrency 5 h1 h2 ...` (5 is the default). Results print as each one finishes, not in input order, so match them by `handle`. Keep concurrency at 5 unless the user says their key has a higher limit: the Scrapely API allows 120 requests a minute per key, and the finder waits and retries when it hits that limit.
 
 ## Errors
 
