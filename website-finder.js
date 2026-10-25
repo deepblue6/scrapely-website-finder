@@ -14,6 +14,8 @@ const SCRAPELY_API_URL = "https://app.scrapely.co/api/v1";
 // DeepSeek V4 Flash: as accurate as GPT-4.1 mini in our tests, at about a seventh of the cost
 const DEFAULT_AI_BASE_URL = "https://openrouter.ai/api/v1";
 const DEFAULT_AI_MODEL = "deepseek/deepseek-v4-flash";
+// @accounts in a bio loaded while the AI runs. Each one is a profile call against the rate limit.
+const MAX_PREFETCH = 2;
 
 // Domains that are never a company's website
 const SKIP_DOMAINS = new Set([
@@ -247,7 +249,13 @@ export async function findWebsite(handle, options = {}) {
     return { ...result, error: "no_domain_found" };
   }
 
-  // 3. AI reads the bio for their name, company name, company @handle, and domain
+  // 3. AI reads the bio for their name, company name, company @handle, and domain.
+  //    Meanwhile, start loading the @accounts the bio mentions, so the company account
+  //    (step 5) is usually ready by the time the AI names it.
+  const mentions = [...new Set((bio.match(/(?<![\w.])@\w{1,15}/g) || []).map((m) => m.slice(1).toLowerCase()))];
+  const prefetched = new Map(
+    mentions.slice(0, MAX_PREFETCH).map((h) => [h, fetchProfile(h, scrapelyApiKey).catch(() => ({}))])
+  );
   const extracted = await extractProfile(profile, ai);
   result.first_name = extracted.first_name || null;
   result.last_name = extracted.last_name || null;
@@ -261,11 +269,16 @@ export async function findWebsite(handle, options = {}) {
     if (domain) result.source = "bio_link";
   }
 
+  // Start the redirect check (step 6) now, while step 5 runs
+  const checkedDomain = domain;
+  const redirectCheck = domain && resolveDomainRedirect(domain);
+
   // 5. Bio names a company account ("CEO @acme"): its domain beats a personal one
   if (extracted.company_handle) {
     const companyHandle = extracted.company_handle.replace(/^@/, "");
     result.company_handle = companyHandle;
-    const { profile: company } = await fetchProfile(companyHandle, scrapelyApiKey).catch(() => ({}));
+    const { profile: company } = await (prefetched.get(companyHandle.toLowerCase())
+      || fetchProfile(companyHandle, scrapelyApiKey).catch(() => ({})));
     if (company) {
       result.company_name = company.name || result.company_name;
       const bioEmail = (company.bio || "").match(/[\w.-]+@[\w.-]+\.\w+/);
@@ -280,8 +293,8 @@ export async function findWebsite(handle, options = {}) {
 
   if (!domain) return { ...result, error: "no_domain_found" };
 
-  // 6. Follow redirects to the domain the company actually uses
-  const redirected = await resolveDomainRedirect(domain);
+  // 6. Follow redirects to the domain the company actually uses (already running unless step 5 switched domain)
+  const redirected = await (domain === checkedDomain ? redirectCheck : resolveDomainRedirect(domain));
   if (redirected !== domain) result.redirected_from = domain;
   result.domain = redirected;
   return result;
